@@ -1,1 +1,103 @@
-# Productive_Calender
+# Momentum — Productive Calendar
+
+A habit tracker and productivity calendar: check off daily habits on a month
+grid, plan tasks with notes, and see your progress on an interactive
+dashboard. Built with Next.js, Prisma/PostgreSQL, NextAuth, Resend, and
+Recharts.
+
+## Features
+
+- **Habit calendar** — a month grid of habits × days, click to toggle,
+  right-click/double-click to attach a note to any day.
+- **Tasks** — one-off to-dos with due date, priority, and a note field.
+- **Dashboard** — stat cards, a weekly bar chart, a completion donut, an
+  analysis table, and a top-habits leaderboard (last 5 weeks).
+- **Dark / light mode** — system-aware, toggleable from the header or Settings.
+- **Email notifications** — a daily reminder for unchecked habits and a
+  weekly summary, sent via [Resend](https://resend.com).
+- **Multi-user accounts** — email/password auth via NextAuth (Auth.js).
+
+## Local setup
+
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Database
+
+You need a PostgreSQL database. For local development:
+
+```bash
+# If you don't already have Postgres running locally:
+# macOS: brew install postgresql && brew services start postgresql
+# Or use Docker: docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=postgres postgres:16
+
+createdb productive_calendar
+```
+
+### 3. Environment variables
+
+Copy `.env.example` to `.env` and fill in the values:
+
+```bash
+cp .env.example .env
+```
+
+- `DATABASE_URL` — your Postgres connection string.
+- `NEXTAUTH_SECRET` — generate with `openssl rand -base64 32`.
+- `RESEND_API_KEY` — create a free account at resend.com and generate an API
+  key. Without it, the app still works — emails are just skipped (logged as
+  `skipped-no-resend-key`).
+- `EMAIL_FROM` — must be a verified sender/domain in Resend for production use.
+  The default `onboarding@resend.dev` works for testing.
+- `CRON_SECRET` — any random string; used to authorize the scheduled email
+  endpoints.
+
+### 4. Apply the database schema
+
+```bash
+npx prisma migrate dev
+```
+
+### 5. Run the dev server
+
+```bash
+npm run dev
+```
+
+Visit http://localhost:3000, create an account, and start tracking.
+
+## Deploying to Vercel
+
+1. Push this repo to GitHub and import it in Vercel.
+2. Add a Postgres database (Vercel Postgres, [Neon](https://neon.tech), or
+   [Supabase](https://supabase.com) all work) and set `DATABASE_URL` in the
+   Vercel project's environment variables.
+3. Set `NEXTAUTH_SECRET`, `NEXTAUTH_URL` (your production URL),
+   `RESEND_API_KEY`, `EMAIL_FROM`, and `CRON_SECRET` in the same place.
+4. Run `npx prisma migrate deploy` against the production database (Vercel's
+   build step does not run migrations automatically — either add it to the
+   build command, e.g. `prisma migrate deploy && next build`, or run it
+   manually from your machine with the production `DATABASE_URL`).
+5. Deploy. `vercel.json` already defines the two cron jobs:
+   - `/api/cron/daily-reminders` — runs hourly; for each user it checks
+     whether the current hour matches their preferred reminder time
+     (in their timezone) and sends an email if any habit is still unchecked.
+   - `/api/cron/weekly-summary` — runs Monday 08:00 UTC.
+
+   **Note:** Vercel's Hobby plan limits cron jobs to once per day. If you're
+   on Hobby, either upgrade to Pro, or point an external scheduler (e.g.
+   [cron-job.org](https://cron-job.org)) at these endpoints with an
+   `Authorization: Bearer <CRON_SECRET>` header on your own schedule.
+
+## Tech stack
+
+- **Framework:** Next.js 16 (App Router, TypeScript, Tailwind CSS v4)
+- **Database / ORM:** PostgreSQL + Prisma 6
+- **Auth:** NextAuth (Auth.js) v5, credentials provider with hashed passwords
+- **Email:** Resend
+- **Charts:** Recharts
+- **Animation:** Motion (Framer Motion)
+- **Theming:** next-themes (class-based dark mode)
