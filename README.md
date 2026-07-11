@@ -71,17 +71,22 @@ Visit http://localhost:3000, create an account, and start tracking.
 
 ## Deploying to Vercel
 
-1. Push this repo to GitHub and import it in Vercel.
+This repo deploys with **Vercel's native GitHub integration** — connect it
+once and every push to the branch auto-deploys, no CLI or GitHub Actions
+required.
+
+1. Go to [vercel.com/new](https://vercel.com/new) and import this repo,
+   selecting the branch you want deployed.
 2. Add a Postgres database (Vercel Postgres, [Neon](https://neon.tech), or
    [Supabase](https://supabase.com) all work) and set `DATABASE_URL` in the
    Vercel project's environment variables.
-3. Set `NEXTAUTH_SECRET`, `NEXTAUTH_URL` (your production URL),
-   `RESEND_API_KEY`, `EMAIL_FROM`, and `CRON_SECRET` in the same place.
-4. Run `npx prisma migrate deploy` against the production database (Vercel's
-   build step does not run migrations automatically — either add it to the
-   build command, e.g. `prisma migrate deploy && next build`, or run it
-   manually from your machine with the production `DATABASE_URL`).
-5. Deploy. `vercel.json` already defines the two cron jobs:
+3. Set `NEXTAUTH_SECRET`, `RESEND_API_KEY`, `EMAIL_FROM`, and `CRON_SECRET`
+   in the same place. `NEXTAUTH_URL` can be left unset until after the first
+   deploy — once Vercel assigns your `*.vercel.app` domain, set it and
+   redeploy (Deployments → ⋯ → Redeploy).
+4. Deploy. `vercel.json` already defines the build command
+   (`prisma migrate deploy && next build`, so the schema is applied on every
+   deploy) and the two cron jobs:
    - `/api/cron/daily-reminders` — runs hourly; for each user it checks
      whether the current hour matches their preferred reminder time
      (in their timezone) and sends an email if any habit is still unchecked.
@@ -91,6 +96,9 @@ Visit http://localhost:3000, create an account, and start tracking.
    on Hobby, either upgrade to Pro, or point an external scheduler (e.g.
    [cron-job.org](https://cron-job.org)) at these endpoints with an
    `Authorization: Bearer <CRON_SECRET>` header on your own schedule.
+
+From then on, every `git push` to the connected branch triggers a new
+deployment automatically — no further setup needed.
 
 ## Tech stack
 
