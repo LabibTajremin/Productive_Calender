@@ -86,16 +86,15 @@ required.
    redeploy (Deployments → ⋯ → Redeploy).
 4. Deploy. `vercel.json` already defines the build command
    (`prisma migrate deploy && next build`, so the schema is applied on every
-   deploy) and the two cron jobs:
-   - `/api/cron/daily-reminders` — runs hourly; for each user it checks
-     whether the current hour matches their preferred reminder time
-     (in their timezone) and sends an email if any habit is still unchecked.
+   deploy) and the two cron jobs, both within Vercel Hobby's once-per-day
+   cron limit:
+   - `/api/cron/daily-reminders` — runs once daily at 13:00 UTC and emails
+     anyone with the daily reminder enabled who still has an unchecked habit.
    - `/api/cron/weekly-summary` — runs Monday 08:00 UTC.
 
-   **Note:** Vercel's Hobby plan limits cron jobs to once per day. If you're
-   on Hobby, either upgrade to Pro, or point an external scheduler (e.g.
-   [cron-job.org](https://cron-job.org)) at these endpoints with an
-   `Authorization: Bearer <CRON_SECRET>` header on your own schedule.
+   **Note:** if you're on Vercel Pro, you can change the daily-reminders
+   schedule to run hourly (e.g. `0 * * * *`) for closer-to-real-time
+   reminders — Pro removes the once-per-day cron cap.
 
 From then on, every `git push` to the connected branch triggers a new
 deployment automatically — no further setup needed.

@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getResendClient, EMAIL_FROM } from "@/lib/resend";
 import { dailyReminderEmail } from "@/lib/email-templates";
-import { getHourInTimezone } from "@/lib/timezone";
 import { isAuthorizedCronRequest } from "@/lib/cron-auth";
 import { toDateKey } from "@/lib/utils";
 
@@ -34,11 +33,6 @@ export async function GET(request: Request) {
   const results: { email: string; status: string }[] = [];
 
   for (const user of users) {
-    const reminderHour = user.notificationSetting?.reminderHour ?? 7;
-    const localHour = getHourInTimezone(now, user.timezone);
-
-    if (localHour !== reminderHour) continue;
-
     const pending = user.habits.filter((h) => !h.entries.some((e) => e.completed));
     if (pending.length === 0) {
       results.push({ email: user.email, status: "skipped-no-pending" });

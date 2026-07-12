@@ -9,8 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
-const HOURS = Array.from({ length: 24 }, (_, i) => i);
-
 export function SettingsForm({
   user,
   initialSetting,
@@ -20,7 +18,7 @@ export function SettingsForm({
 }) {
   const { theme, setTheme } = useTheme();
   const [dailyReminder, setDailyReminder] = useState(initialSetting.dailyReminder);
-  const [reminderHour, setReminderHour] = useState(initialSetting.reminderHour);
+  const [reminderHour] = useState(initialSetting.reminderHour);
   const [weeklySummary, setWeeklySummary] = useState(initialSetting.weeklySummary);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -110,22 +108,9 @@ export function SettingsForm({
           </div>
 
           {dailyReminder && (
-            <div>
-              <Label htmlFor="reminder-hour">Send around</Label>
-              <select
-                id="reminder-hour"
-                value={reminderHour}
-                onChange={(e) => setReminderHour(Number(e.target.value))}
-                className="h-10 w-40 rounded-lg border border-border-strong bg-surface px-3 text-sm text-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/30"
-              >
-                {HOURS.map((h) => (
-                  <option key={h} value={h}>
-                    {h.toString().padStart(2, "0")}:00
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1 text-xs text-subtle-foreground">In your local time zone.</p>
-            </div>
+            <p className="text-xs text-subtle-foreground">
+              Sent once daily (around 13:00 UTC) if any habit is still unchecked.
+            </p>
           )}
 
           <div className="flex items-center justify-between border-t border-border pt-4">
