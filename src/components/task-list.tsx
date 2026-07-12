@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { TaskModal } from "@/components/task-modal";
 import { cn } from "@/lib/utils";
-import type { Task } from "@/generated/prisma/client";
+import type { Task } from "@prisma/client";
 
 const PRIORITY_STYLES: Record<string, string> = {
   LOW: "bg-success/10 text-success",

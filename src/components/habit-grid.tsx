@@ -8,7 +8,7 @@ import { toDateKey } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { AddHabitModal } from "@/components/add-habit-modal";
 import { EntryModal } from "@/components/entry-modal";
-import type { Habit, HabitEntry } from "@/generated/prisma/client";
+import type { Habit, HabitEntry } from "@prisma/client";
 
 type HabitWithEntries = Habit & { entries: HabitEntry[] };
 

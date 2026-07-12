@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Input, Label, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import type { Task } from "@/generated/prisma/client";
+import type { Task } from "@prisma/client";
 
 const PRIORITIES = [
   { value: "LOW", label: "Low" },

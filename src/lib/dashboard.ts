@@ -1,5 +1,5 @@
 import { isSameDay } from "@/lib/date-utils";
-import type { Habit, HabitEntry } from "@/generated/prisma/client";
+import type { Habit, HabitEntry } from "@prisma/client";
 
 export type HabitWithEntries = Habit & { entries: HabitEntry[] };
 
