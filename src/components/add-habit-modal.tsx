@@ -4,9 +4,11 @@ import { useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Input, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { WEEKDAY_LABELS, WEEKDAY_SHORT_LABELS } from "@/lib/date-utils";
 
 const COLORS = ["#6366f1", "#0ca30c", "#eda100", "#e34948", "#1baf7a", "#e87ba4", "#eb6834", "#4a3aa7"];
 const ICONS = ["✨", "💪", "📖", "🧘", "💧", "🏃", "🎯", "🚫", "🌅", "💤"];
+const ALL_WEEKDAYS = [0, 1, 2, 3, 4, 5, 6];
 
 export function AddHabitModal({
   open,
@@ -20,13 +22,23 @@ export function AddHabitModal({
   const [title, setTitle] = useState("");
   const [icon, setIcon] = useState(ICONS[0]);
   const [color, setColor] = useState(COLORS[0]);
-  const [weeklyGoal, setWeeklyGoal] = useState(7);
+  const [activeWeekdays, setActiveWeekdays] = useState<number[]>(ALL_WEEKDAYS);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function toggleWeekday(day: number) {
+    setActiveWeekdays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort(),
+    );
+  }
 
   async function handleSubmit() {
     if (!title.trim()) {
       setError("Give your habit a name");
+      return;
+    }
+    if (activeWeekdays.length === 0) {
+      setError("Select at least one day");
       return;
     }
     setLoading(true);
@@ -35,7 +47,7 @@ export function AddHabitModal({
     const res = await fetch("/api/habits", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, icon, color, weeklyGoal }),
+      body: JSON.stringify({ title, icon, color, activeWeekdays }),
     });
 
     setLoading(false);
@@ -51,7 +63,7 @@ export function AddHabitModal({
     setTitle("");
     setIcon(ICONS[0]);
     setColor(COLORS[0]);
-    setWeeklyGoal(7);
+    setActiveWeekdays(ALL_WEEKDAYS);
     onClose();
   }
 
@@ -109,15 +121,28 @@ export function AddHabitModal({
         </div>
 
         <div>
-          <Label htmlFor="weekly-goal">Weekly goal (days per week)</Label>
-          <Input
-            id="weekly-goal"
-            type="number"
-            min={1}
-            max={7}
-            value={weeklyGoal}
-            onChange={(e) => setWeeklyGoal(Number(e.target.value))}
-          />
+          <Label>Repeat on</Label>
+          <div className="flex gap-1.5">
+            {WEEKDAY_SHORT_LABELS.map((label, day) => (
+              <button
+                key={day}
+                type="button"
+                onClick={() => toggleWeekday(day)}
+                className={`flex h-9 w-9 items-center justify-center rounded-lg border text-xs font-medium transition-colors ${
+                  activeWeekdays.includes(day)
+                    ? "border-ring bg-accent text-accent-foreground"
+                    : "border-border text-muted-foreground hover:bg-surface-raised"
+                }`}
+                aria-pressed={activeWeekdays.includes(day)}
+                aria-label={WEEKDAY_LABELS[day]}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="mt-1 text-xs text-subtle-foreground">
+            All days are selected by default — tap a day to exclude it.
+          </p>
         </div>
 
         {error && <p className="text-sm text-danger">{error}</p>}

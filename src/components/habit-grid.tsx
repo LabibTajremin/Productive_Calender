@@ -267,6 +267,7 @@ function SortableHabitRow({
   });
 
   const completedCount = habit.entries.filter((e) => e.completed).length;
+  const scheduledCount = days.filter((d) => habit.activeWeekdays.includes(d.getDay())).length;
 
   return (
     <tr
@@ -294,7 +295,7 @@ function SortableHabitRow({
           <div className="min-w-0">
             <p className="truncate text-xs font-medium text-foreground">{habit.title}</p>
             <p className="text-[10px] text-subtle-foreground">
-              {completedCount}/{days.length} days
+              {completedCount}/{scheduledCount} days
             </p>
           </div>
         </div>
@@ -302,11 +303,13 @@ function SortableHabitRow({
       {days.map((d) => {
         const entry = entryFor(habit, d);
         const isFuture = d > today && !isSameDay(d, today);
+        const isScheduled = habit.activeWeekdays.includes(d.getDay());
+        const isDisabled = isFuture || !isScheduled;
         return (
           <td key={d.toISOString()} className="border-b border-border p-1 text-center">
             <button
               type="button"
-              disabled={isFuture}
+              disabled={isDisabled}
               onClick={() => quickToggle(habit, d)}
               onDoubleClick={(e) => {
                 e.preventDefault();
@@ -320,9 +323,14 @@ function SortableHabitRow({
               style={{
                 borderColor: entry?.completed ? habit.color : "var(--border-strong)",
                 backgroundColor: entry?.completed ? habit.color : "transparent",
+                borderStyle: !isScheduled && !isFuture ? "dashed" : "solid",
               }}
               aria-label={`Toggle ${habit.title} on ${d.toDateString()}`}
-              title="Click to toggle · right-click / double-click for notes"
+              title={
+                !isScheduled
+                  ? `${habit.title} isn't scheduled on this day`
+                  : "Click to toggle · right-click / double-click for notes"
+              }
             >
               {entry?.completed && showTicks && (
                 <Check size={13} strokeWidth={3} className="text-white" />
