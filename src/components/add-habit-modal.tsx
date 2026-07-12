@@ -7,7 +7,12 @@ import { Button } from "@/components/ui/button";
 import { WEEKDAY_LABELS, WEEKDAY_SHORT_LABELS } from "@/lib/date-utils";
 
 const COLORS = ["#6366f1", "#0ca30c", "#eda100", "#e34948", "#1baf7a", "#e87ba4", "#eb6834", "#4a3aa7"];
-const ICONS = ["✨", "💪", "📖", "🧘", "💧", "🏃", "🎯", "🚫", "🌅", "💤"];
+const ICONS = [
+  "✨", "💪", "📖", "🧘", "💧", "🏃", "🎯", "🚫", "🌅", "💤",
+  "🙏", "🕌", "🕋", "📿", "🧠", "✍️", "💻", "🎨", "🎵", "🚶",
+  "🚴", "🏋️", "🥗", "🍎", "🚭", "💊", "🧹", "💰", "📚", "🗣️",
+  "😴", "☀️", "🌙", "🧴", "🪥", "☕", "🚰", "📵", "🧘‍♂️", "❤️",
+];
 const ALL_WEEKDAYS = [0, 1, 2, 3, 4, 5, 6];
 
 export function AddHabitModal({
