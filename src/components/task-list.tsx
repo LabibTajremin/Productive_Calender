@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, StickyNote, Calendar as CalendarIcon, Check, GripVertical } from "lucide-react";
+import {
+  Plus,
+  StickyNote,
+  Calendar as CalendarIcon,
+  Check,
+  GripVertical,
+  Pencil,
+  AlertCircle,
+} from "lucide-react";
 import {
   DndContext,
   PointerSensor,
@@ -27,16 +35,25 @@ import { computeTaskStats } from "@/lib/task-stats";
 import { cn } from "@/lib/utils";
 import type { Task } from "@prisma/client";
 
-const PRIORITY_STYLES: Record<string, string> = {
-  LOW: "bg-success/10 text-success",
-  MEDIUM: "bg-warning/10 text-warning",
-  HIGH: "bg-danger/10 text-danger",
+const PRIORITY_ACCENT: Record<string, string> = {
+  LOW: "var(--success)",
+  MEDIUM: "var(--warning)",
+  HIGH: "var(--danger)",
 };
+
+const PRIORITY_TEXT: Record<string, string> = {
+  LOW: "text-success",
+  MEDIUM: "text-warning",
+  HIGH: "text-danger",
+};
+
+const NOTE_PREVIEW_LENGTH = 90;
 
 export function TaskList({ initialTasks }: { initialTasks: Task[] }) {
   const [tasks, setTasks] = useState(initialTasks);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
+  const [modalKey, setModalKey] = useState(0);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -45,11 +62,13 @@ export function TaskList({ initialTasks }: { initialTasks: Task[] }) {
 
   function openNew() {
     setEditing(null);
+    setModalKey((k) => k + 1);
     setModalOpen(true);
   }
 
   function openEdit(task: Task) {
     setEditing(task);
+    setModalKey((k) => k + 1);
     setModalOpen(true);
   }
 
@@ -148,6 +167,7 @@ export function TaskList({ initialTasks }: { initialTasks: Task[] }) {
       )}
 
       <TaskModal
+        key={modalKey}
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         task={editing}
@@ -197,13 +217,24 @@ function SortableTaskCard({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
   });
+  const [noteExpanded, setNoteExpanded] = useState(false);
+
+  const isOverdue = !task.completed && !!task.dueDate && new Date(task.dueDate) < new Date();
+  const note = task.note ?? "";
+  const noteIsLong = note.length > NOTE_PREVIEW_LENGTH;
+  const notePreview = noteIsLong ? `${note.slice(0, NOTE_PREVIEW_LENGTH).trimEnd()}…` : note;
 
   return (
     <Card
       ref={setNodeRef}
-      style={{ transform: CSS.Transform.toString(transform), transition }}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        borderLeftColor: PRIORITY_ACCENT[task.priority],
+        borderLeftWidth: 4,
+      }}
       className={cn(
-        "group flex items-start gap-2 p-3.5",
+        "group flex items-start gap-2 py-3 pr-3.5 pl-3 transition-shadow hover:shadow-md",
         isDragging && "relative z-20 shadow-lg",
       )}
     >
@@ -231,36 +262,79 @@ function SortableTaskCard({
         {task.completed && <Check size={12} strokeWidth={3} />}
       </button>
 
-      <button type="button" onClick={() => onEdit(task)} className="min-w-0 flex-1 text-left">
-        <p
-          className={cn(
-            "truncate text-sm font-medium text-foreground",
-            task.completed && "text-muted-foreground line-through",
-          )}
-        >
-          {task.title}
-        </p>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start justify-between gap-2">
+          <button
+            type="button"
+            onClick={() => onEdit(task)}
+            className="min-w-0 flex-1 text-left"
+          >
+            <p
+              className={cn(
+                "truncate text-sm font-medium text-foreground",
+                task.completed && "text-muted-foreground line-through",
+              )}
+            >
+              {task.title}
+            </p>
+          </button>
+          <button
+            type="button"
+            onClick={() => onEdit(task)}
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-subtle-foreground opacity-0 transition-opacity hover:bg-surface-raised hover:text-foreground group-hover:opacity-100"
+            aria-label={`Edit ${task.title}`}
+            title="Edit task"
+          >
+            <Pencil size={13} />
+          </button>
+        </div>
+
         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          <span className={cn("rounded-full px-2 py-0.5 font-medium", PRIORITY_STYLES[task.priority])}>
+          <span className={cn("inline-flex items-center gap-1 font-medium", PRIORITY_TEXT[task.priority])}>
+            <span
+              className="h-1.5 w-1.5 rounded-full"
+              style={{ backgroundColor: PRIORITY_ACCENT[task.priority] }}
+            />
             {task.priority}
           </span>
           {task.dueDate && (
-            <span className="inline-flex items-center gap-1">
-              <CalendarIcon size={11} />
+            <span
+              className={cn(
+                "inline-flex items-center gap-1",
+                isOverdue && "font-medium text-danger",
+              )}
+            >
+              {isOverdue ? <AlertCircle size={11} /> : <CalendarIcon size={11} />}
               {new Date(task.dueDate).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
               })}
-            </span>
-          )}
-          {task.note && (
-            <span className="inline-flex items-center gap-1">
-              <StickyNote size={11} />
-              Note
+              {isOverdue && " · overdue"}
             </span>
           )}
         </div>
-      </button>
+
+        {note && (
+          <div className="mt-1.5 flex items-start gap-1 text-xs text-muted-foreground">
+            <StickyNote size={11} className="mt-0.5 shrink-0" />
+            <p className="min-w-0">
+              {noteExpanded ? note : notePreview}
+              {noteIsLong && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setNoteExpanded((v) => !v);
+                  }}
+                  className="ml-1.5 font-medium text-accent hover:underline"
+                >
+                  {noteExpanded ? "Show less" : "Show more"}
+                </button>
+              )}
+            </p>
+          </div>
+        )}
+      </div>
     </Card>
   );
 }
