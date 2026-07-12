@@ -14,14 +14,18 @@ export async function POST(request: Request) {
     );
   }
 
-  const { name, email, password } = parsed.data;
+  const { name, username, email, password } = parsed.data;
 
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const existing = await prisma.user.findFirst({
+    where: { OR: [{ email }, { username }] },
+    select: { email: true, username: true },
+  });
   if (existing) {
-    return NextResponse.json(
-      { error: "An account with this email already exists" },
-      { status: 409 },
-    );
+    const error =
+      existing.email === email
+        ? "An account with this email already exists"
+        : "That username is already taken";
+    return NextResponse.json({ error }, { status: 409 });
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
@@ -29,11 +33,12 @@ export async function POST(request: Request) {
   const user = await prisma.user.create({
     data: {
       name,
+      username,
       email,
       passwordHash,
       notificationSetting: { create: {} },
     },
-    select: { id: true, name: true, email: true },
+    select: { id: true, name: true, username: true, email: true },
   });
 
   return NextResponse.json({ user }, { status: 201 });

@@ -11,18 +11,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
       credentials: {
-        email: {},
+        identifier: {},
         password: {},
       },
       authorize: async (credentials) => {
-        const email = credentials?.email;
+        const identifier = credentials?.identifier;
         const password = credentials?.password;
-        if (typeof email !== "string" || typeof password !== "string") {
+        if (typeof identifier !== "string" || typeof password !== "string") {
           return null;
         }
 
-        const user = await prisma.user.findUnique({
-          where: { email: email.toLowerCase() },
+        const normalized = identifier.trim().toLowerCase();
+        const user = await prisma.user.findFirst({
+          where: { OR: [{ email: normalized }, { username: normalized }] },
         });
         if (!user) return null;
 
@@ -33,6 +34,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           id: user.id,
           name: user.name,
           email: user.email,
+          username: user.username,
         };
       },
     }),
@@ -41,12 +43,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user }) {
       if (user?.id) {
         token.id = user.id;
+        token.username = (user as { username?: string }).username;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user && token.id) {
         session.user.id = token.id as string;
+        session.user.username = token.username as string;
       }
       return session;
     },

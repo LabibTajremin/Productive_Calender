@@ -23,7 +23,11 @@ export default async function SettingsPage() {
       </div>
 
       <SettingsForm
-        user={{ name: session.user.name ?? "", email: session.user.email ?? "" }}
+        user={{
+          name: session.user.name ?? "",
+          username: session.user.username ?? "",
+          email: session.user.email ?? "",
+        }}
         initialSetting={{
           dailyReminder: setting.dailyReminder,
           reminderHour: setting.reminderHour,

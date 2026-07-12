@@ -13,7 +13,7 @@ export function SettingsForm({
   user,
   initialSetting,
 }: {
-  user: { name: string; email: string };
+  user: { name: string; username: string; email: string };
   initialSetting: { dailyReminder: boolean; reminderHour: number; weeklySummary: boolean };
 }) {
   const { theme, setTheme } = useTheme();
@@ -51,6 +51,10 @@ export function SettingsForm({
           <div>
             <Label htmlFor="name">Name</Label>
             <Input id="name" defaultValue={user.name} disabled />
+          </div>
+          <div>
+            <Label htmlFor="username">Username</Label>
+            <Input id="username" defaultValue={user.username} disabled />
           </div>
           <div>
             <Label htmlFor="email">Email</Label>
