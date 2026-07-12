@@ -12,19 +12,31 @@ import { cn } from "@/lib/utils";
 export function SettingsForm({
   user,
   initialSetting,
+  initialPreferences,
 }: {
   user: { name: string; username: string; email: string };
   initialSetting: { dailyReminder: boolean; reminderHour: number; weeklySummary: boolean };
+  initialPreferences: { showHabitTicks: boolean };
 }) {
   const { theme, setTheme } = useTheme();
   const [dailyReminder, setDailyReminder] = useState(initialSetting.dailyReminder);
   const [reminderHour] = useState(initialSetting.reminderHour);
   const [weeklySummary, setWeeklySummary] = useState(initialSetting.weeklySummary);
+  const [showHabitTicks, setShowHabitTicks] = useState(initialPreferences.showHabitTicks);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
+
+  async function handleTickToggle(next: boolean) {
+    setShowHabitTicks(next);
+    await fetch("/api/settings/preferences", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ showHabitTicks: next }),
+    });
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -92,6 +104,27 @@ export function SettingsForm({
                 {label}
               </button>
             ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Habit Calendar</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">Checkmark on completed days</p>
+              <p className="text-xs text-muted-foreground">
+                Show a tick mark over the accent-colored box for a completed day.
+              </p>
+            </div>
+            <Switch
+              checked={showHabitTicks}
+              onChange={handleTickToggle}
+              label="Checkmark on completed days"
+            />
           </div>
         </CardContent>
       </Card>
