@@ -6,7 +6,13 @@ import { Input, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { WEEKDAY_LABELS, WEEKDAY_SHORT_LABELS } from "@/lib/date-utils";
 
-const COLORS = ["#6366f1", "#0ca30c", "#eda100", "#e34948", "#1baf7a", "#e87ba4", "#eb6834", "#4a3aa7"];
+const COLORS = [
+  // Core
+  "#6366f1", "#0ca30c", "#eda100", "#e34948", "#1baf7a", "#e87ba4", "#eb6834", "#4a3aa7",
+  // Premium jewel tones
+  "#1e40af", "#059669", "#be123c", "#7c3aed", "#b45309", "#b76e79",
+  "#334155", "#92400e", "#1e293b", "#86198f", "#0f766e", "#7f1d1d",
+];
 const ICONS = [
   "✨", "💪", "📖", "🧘", "💧", "🏃", "🎯", "🚫", "🌅", "💤",
   "🙏", "🕌", "🕋", "📿", "🧠", "✍️", "💻", "🎨", "🎵", "🚶",
