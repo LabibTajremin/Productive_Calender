@@ -2,8 +2,6 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { HabitGrid } from "@/components/habit-grid";
-import { TodayHabitProgress } from "@/components/today-habit-progress";
-import { toDateKey } from "@/lib/utils";
 
 export default async function CalendarPage({
   searchParams,
@@ -37,21 +35,6 @@ export default async function CalendarPage({
     }),
   ]);
 
-  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
-  let todayScheduled = 0;
-  let todayCompleted = 0;
-
-  if (isCurrentMonth) {
-    const todayDate = new Date(`${toDateKey(now)}T00:00:00.000Z`);
-    const todayDow = now.getDay();
-    for (const habit of habits) {
-      if (!habit.activeWeekdays.includes(todayDow)) continue;
-      todayScheduled += 1;
-      const entry = habit.entries.find((e) => e.date.getTime() === todayDate.getTime());
-      if (entry?.completed) todayCompleted += 1;
-    }
-  }
-
   return (
     <div className="space-y-6">
       <div>
@@ -60,10 +43,6 @@ export default async function CalendarPage({
           Check off each day you show up. Click a day for details or to leave a note.
         </p>
       </div>
-
-      {isCurrentMonth && (
-        <TodayHabitProgress scheduled={todayScheduled} completed={todayCompleted} />
-      )}
 
       <HabitGrid
         initialHabits={habits}

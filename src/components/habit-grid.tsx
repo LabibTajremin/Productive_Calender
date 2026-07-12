@@ -25,6 +25,7 @@ import { toDateKey } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { AddHabitModal } from "@/components/add-habit-modal";
 import { EntryModal } from "@/components/entry-modal";
+import { TodayHabitProgress } from "@/components/today-habit-progress";
 import type { Habit, HabitEntry } from "@prisma/client";
 
 type HabitWithEntries = Habit & { entries: HabitEntry[] };
@@ -49,6 +50,19 @@ export function HabitGrid({
 
   const days = useMemo(() => getMonthMatrix(year, month), [year, month]);
   const today = new Date();
+  const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
+
+  let todayScheduled = 0;
+  let todayCompleted = 0;
+  if (isCurrentMonth) {
+    const todayDow = today.getDay();
+    for (const habit of habits) {
+      if (!habit.activeWeekdays.includes(todayDow)) continue;
+      todayScheduled += 1;
+      const entry = habit.entries.find((e) => isSameDay(new Date(e.date), today));
+      if (entry?.completed) todayCompleted += 1;
+    }
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -128,6 +142,10 @@ export function HabitGrid({
 
   return (
     <div className="space-y-4">
+      {isCurrentMonth && (
+        <TodayHabitProgress scheduled={todayScheduled} completed={todayCompleted} />
+      )}
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <button

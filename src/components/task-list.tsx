@@ -22,6 +22,8 @@ import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { TaskModal } from "@/components/task-modal";
+import { TaskStatsCard } from "@/components/task-stats-card";
+import { computeTaskStats } from "@/lib/task-stats";
 import { cn } from "@/lib/utils";
 import type { Task } from "@prisma/client";
 
@@ -63,12 +65,17 @@ export function TaskList({ initialTasks }: { initialTasks: Task[] }) {
   }
 
   async function toggleComplete(task: Task) {
-    const next = { ...task, completed: !task.completed };
+    const nextCompleted = !task.completed;
+    const next: Task = {
+      ...task,
+      completed: nextCompleted,
+      completedAt: nextCompleted ? new Date() : null,
+    };
     upsert(next);
     await fetch(`/api/tasks/${task.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ completed: next.completed }),
+      body: JSON.stringify({ completed: nextCompleted }),
     });
   }
 
@@ -100,9 +107,12 @@ export function TaskList({ initialTasks }: { initialTasks: Task[] }) {
 
   const pending = tasks.filter((t) => !t.completed);
   const done = tasks.filter((t) => t.completed);
+  const stats = computeTaskStats(tasks, new Date());
 
   return (
     <div className="space-y-6">
+      <TaskStatsCard stats={stats} />
+
       <div className="flex justify-end">
         <Button size="sm" onClick={openNew}>
           <Plus size={15} />
