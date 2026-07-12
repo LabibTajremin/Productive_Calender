@@ -38,17 +38,17 @@ model NotificationSetting {
 }
 
 model Habit {
-  id         String   @id @default(cuid())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title      String
-  icon       String   @default("✨")
-  color      String   @default("#6366f1")
-  weeklyGoal Int      @default(7)
-  archived   Boolean  @default(false)
-  order      Int      @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title          String
+  icon           String   @default("✨")
+  color          String   @default("#6366f1")
+  activeWeekdays Int[]    @default([0, 1, 2, 3, 4, 5, 6])
+  archived       Boolean  @default(false)
+  order          Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   entries HabitEntry[]
 
@@ -83,6 +83,7 @@ model Task {
   note           String?
   dueDate        DateTime?
   completed      Boolean   @default(false)
+  completedAt    DateTime?
   priority       Priority  @default(MEDIUM)
   order          Int       @default(0)
   reminderSentAt DateTime?

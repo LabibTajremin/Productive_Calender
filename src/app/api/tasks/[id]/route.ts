@@ -26,7 +26,15 @@ export async function PATCH(request: Request, { params }: { params: Params }) {
   if (note !== undefined) data.note = note === null ? null : String(note).slice(0, 4000);
   if (dueDate !== undefined) data.dueDate = dueDate ? new Date(dueDate as string) : null;
   if (priority !== undefined) data.priority = priority;
-  if (completed !== undefined) data.completed = Boolean(completed);
+  if (completed !== undefined) {
+    const nextCompleted = Boolean(completed);
+    data.completed = nextCompleted;
+    if (nextCompleted && !task.completed) {
+      data.completedAt = new Date();
+    } else if (!nextCompleted) {
+      data.completedAt = null;
+    }
+  }
 
   const updated = await prisma.task.update({ where: { id }, data });
 

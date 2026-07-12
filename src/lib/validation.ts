@@ -23,7 +23,11 @@ export const habitSchema = z.object({
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/, "Color must be a hex value")
     .default("#6366f1"),
-  weeklyGoal: z.number().int().min(1).max(7).default(7),
+  activeWeekdays: z
+    .array(z.number().int().min(0).max(6))
+    .min(1, "Select at least one day")
+    .max(7)
+    .default([0, 1, 2, 3, 4, 5, 6]),
 });
 
 export const taskSchema = z.object({

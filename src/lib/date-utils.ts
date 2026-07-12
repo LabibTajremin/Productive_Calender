@@ -21,3 +21,7 @@ export function isSameDay(a: Date, b: Date): boolean {
     a.getDate() === b.getDate()
   );
 }
+
+// Index matches JS Date#getDay(): 0 = Sunday … 6 = Saturday.
+export const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+export const WEEKDAY_SHORT_LABELS = ["S", "M", "T", "W", "T", "F", "S"] as const;

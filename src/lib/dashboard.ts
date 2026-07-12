@@ -58,6 +58,10 @@ function currentStreak(habit: HabitWithEntries, referenceDate: Date): number {
   return streak;
 }
 
+function isScheduled(habit: HabitWithEntries, date: Date): boolean {
+  return habit.activeWeekdays.includes(date.getDay());
+}
+
 export function computeDashboardData(
   habits: HabitWithEntries[],
   referenceDate: Date,
@@ -67,8 +71,11 @@ export function computeDashboardData(
   const weeklyData: WeekBucket[] = Array.from({ length: WEEKS }, (_, weekIndex) => {
     const weekDays = windowDays.slice(weekIndex * DAYS_PER_WEEK, (weekIndex + 1) * DAYS_PER_WEEK);
     let completed = 0;
+    let possible = 0;
     for (const habit of habits) {
       for (const day of weekDays) {
+        if (!isScheduled(habit, day)) continue;
+        possible += 1;
         const entry = habit.entries.find((e) => isSameDay(new Date(e.date), day));
         if (entry?.completed) completed += 1;
       }
@@ -76,7 +83,7 @@ export function computeDashboardData(
     return {
       label: `Week ${weekIndex + 1}`,
       completed,
-      possible: habits.length * weekDays.length,
+      possible,
     };
   });
 
@@ -84,9 +91,10 @@ export function computeDashboardData(
   const totalPossible = weeklyData.reduce((sum, w) => sum + w.possible, 0);
 
   const analysisRows: AnalysisRow[] = habits.map((habit) => {
-    const goal = Math.max(1, Math.round((habit.weeklyGoal / DAYS_PER_WEEK) * windowDays.length));
+    const scheduledDays = windowDays.filter((d) => isScheduled(habit, d));
+    const goal = Math.max(1, scheduledDays.length);
     const actual = habit.entries.filter(
-      (e) => e.completed && windowDays.some((d) => isSameDay(d, new Date(e.date))),
+      (e) => e.completed && scheduledDays.some((d) => isSameDay(d, new Date(e.date))),
     ).length;
     const left = Math.max(goal - actual, 0);
     const percent = Math.round((actual / goal) * 100);
