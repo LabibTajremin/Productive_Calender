@@ -1,11 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { Check } from "lucide-react";
 import { Modal } from "@/components/ui/modal";
 import { Input, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { WEEKDAY_LABELS, WEEKDAY_SHORT_LABELS } from "@/lib/date-utils";
 import type { Habit } from "@prisma/client";
+
+function isLightColor(hex: string): boolean {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.6;
+}
 
 const COLORS = [
   // Core
@@ -136,10 +145,11 @@ export function AddHabitModal({
                 key={i}
                 type="button"
                 onClick={() => setIcon(i)}
-                className={`flex h-11 w-11 items-center justify-center rounded-lg border text-xl transition-colors ${
+                aria-pressed={icon === i}
+                className={`flex h-11 w-11 items-center justify-center rounded-lg border-2 text-xl transition-all ${
                   icon === i
-                    ? "border-ring bg-surface-raised"
-                    : "border-border hover:bg-surface-raised"
+                    ? "border-accent bg-accent/15 scale-105 shadow-sm"
+                    : "border-border hover:border-border-strong hover:bg-surface-raised"
                 }`}
               >
                 {i}
@@ -156,13 +166,23 @@ export function AddHabitModal({
                 key={c}
                 type="button"
                 onClick={() => setColor(c)}
-                className="h-8 w-8 rounded-full ring-offset-2 ring-offset-surface transition-all"
-                style={{
-                  backgroundColor: c,
-                  boxShadow: color === c ? `0 0 0 2px ${c}` : undefined,
-                }}
+                aria-pressed={color === c}
                 aria-label={c}
-              />
+                className={`relative flex h-9 w-9 items-center justify-center rounded-full transition-transform ${
+                  color === c
+                    ? "scale-110 ring-2 ring-foreground ring-offset-2 ring-offset-surface"
+                    : "hover:scale-105"
+                }`}
+                style={{ backgroundColor: c }}
+              >
+                {color === c && (
+                  <Check
+                    size={16}
+                    strokeWidth={3.5}
+                    color={isLightColor(c) ? "#111114" : "#ffffff"}
+                  />
+                )}
+              </button>
             ))}
           </div>
         </div>
