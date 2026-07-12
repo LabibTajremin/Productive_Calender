@@ -44,6 +44,8 @@ export function HabitGrid({
   const router = useRouter();
   const [habits, setHabits] = useState(initialHabits);
   const [addOpen, setAddOpen] = useState(false);
+  const [editingHabit, setEditingHabit] = useState<HabitWithEntries | null>(null);
+  const [modalKey, setModalKey] = useState(0);
   const [activeCell, setActiveCell] = useState<{ habit: HabitWithEntries; date: Date } | null>(
     null,
   );
@@ -76,6 +78,26 @@ export function HabitGrid({
       month: String(next.getMonth()),
     });
     router.push(`/calendar?${params.toString()}`);
+  }
+
+  function openAdd() {
+    setEditingHabit(null);
+    setModalKey((k) => k + 1);
+    setAddOpen(true);
+  }
+
+  function openEdit(habit: HabitWithEntries) {
+    setEditingHabit(habit);
+    setModalKey((k) => k + 1);
+    setAddOpen(true);
+  }
+
+  function updateHabit(updated: Habit) {
+    setHabits((prev) => prev.map((h) => (h.id === updated.id ? { ...h, ...updated } : h)));
+  }
+
+  function removeHabit(id: string) {
+    setHabits((prev) => prev.filter((h) => h.id !== id));
   }
 
   function entryFor(habit: HabitWithEntries, date: Date) {
@@ -168,7 +190,7 @@ export function HabitGrid({
             <ChevronRight size={16} />
           </button>
         </div>
-        <Button size="sm" onClick={() => setAddOpen(true)}>
+        <Button size="sm" onClick={openAdd}>
           <Plus size={15} />
           Add habit
         </Button>
@@ -222,6 +244,7 @@ export function HabitGrid({
                       entryFor={entryFor}
                       quickToggle={quickToggle}
                       onOpenEntry={(date) => setActiveCell({ habit, date })}
+                      onEdit={() => openEdit(habit)}
                     />
                   ))}
                 </tbody>
@@ -237,9 +260,13 @@ export function HabitGrid({
       </p>
 
       <AddHabitModal
+        key={modalKey}
         open={addOpen}
         onClose={() => setAddOpen(false)}
+        habit={editingHabit}
         onCreated={(habit) => setHabits((prev) => [...prev, habit as HabitWithEntries])}
+        onUpdated={updateHabit}
+        onArchived={removeHabit}
       />
 
       {activeCell && (
@@ -271,6 +298,7 @@ function SortableHabitRow({
   entryFor,
   quickToggle,
   onOpenEntry,
+  onEdit,
 }: {
   habit: HabitWithEntries;
   days: Date[];
@@ -279,6 +307,7 @@ function SortableHabitRow({
   entryFor: (habit: HabitWithEntries, date: Date) => HabitEntry | undefined;
   quickToggle: (habit: HabitWithEntries, date: Date) => void;
   onOpenEntry: (date: Date) => void;
+  onEdit: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: habit.id,
@@ -304,18 +333,27 @@ function SortableHabitRow({
           >
             <GripVertical size={14} />
           </button>
-          <span
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs"
-            style={{ backgroundColor: `${habit.color}22` }}
+          <button
+            type="button"
+            onClick={onEdit}
+            className="flex min-w-0 flex-1 items-center gap-1.5 rounded-md text-left"
+            title="Edit habit"
           >
-            {habit.icon}
-          </span>
-          <div className="min-w-0">
-            <p className="truncate text-xs font-medium text-foreground">{habit.title}</p>
-            <p className="text-[10px] text-subtle-foreground">
-              {completedCount}/{scheduledCount} days
-            </p>
-          </div>
+            <span
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-lg transition-colors group-hover:brightness-95"
+              style={{ backgroundColor: `${habit.color}22` }}
+            >
+              {habit.icon}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-xs font-medium text-foreground group-hover:underline">
+                {habit.title}
+              </p>
+              <p className="text-[10px] text-subtle-foreground">
+                {completedCount}/{scheduledCount} days
+              </p>
+            </div>
+          </button>
         </div>
       </td>
       {days.map((d) => {

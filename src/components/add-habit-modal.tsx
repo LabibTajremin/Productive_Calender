@@ -5,6 +5,7 @@ import { Modal } from "@/components/ui/modal";
 import { Input, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { WEEKDAY_LABELS, WEEKDAY_SHORT_LABELS } from "@/lib/date-utils";
+import type { Habit } from "@prisma/client";
 
 const COLORS = [
   // Core
@@ -24,16 +25,24 @@ const ALL_WEEKDAYS = [0, 1, 2, 3, 4, 5, 6];
 export function AddHabitModal({
   open,
   onClose,
+  habit,
   onCreated,
+  onUpdated,
+  onArchived,
 }: {
   open: boolean;
   onClose: () => void;
-  onCreated: (habit: unknown) => void;
+  habit?: Habit | null;
+  onCreated?: (habit: unknown) => void;
+  onUpdated?: (habit: Habit) => void;
+  onArchived?: (id: string) => void;
 }) {
-  const [title, setTitle] = useState("");
-  const [icon, setIcon] = useState(ICONS[0]);
-  const [color, setColor] = useState(COLORS[0]);
-  const [activeWeekdays, setActiveWeekdays] = useState<number[]>(ALL_WEEKDAYS);
+  const [title, setTitle] = useState(habit?.title ?? "");
+  const [icon, setIcon] = useState(habit?.icon ?? ICONS[0]);
+  const [color, setColor] = useState(habit?.color ?? COLORS[0]);
+  const [activeWeekdays, setActiveWeekdays] = useState<number[]>(
+    habit?.activeWeekdays ?? ALL_WEEKDAYS,
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,6 +50,13 @@ export function AddHabitModal({
     setActiveWeekdays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day].sort(),
     );
+  }
+
+  function reset() {
+    setTitle("");
+    setIcon(ICONS[0]);
+    setColor(COLORS[0]);
+    setActiveWeekdays(ALL_WEEKDAYS);
   }
 
   async function handleSubmit() {
@@ -55,31 +71,51 @@ export function AddHabitModal({
     setLoading(true);
     setError(null);
 
-    const res = await fetch("/api/habits", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, icon, color, activeWeekdays }),
-    });
+    const payload = { title, icon, color, activeWeekdays };
+
+    const res = habit
+      ? await fetch(`/api/habits/${habit.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+      : await fetch("/api/habits", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
 
     setLoading(false);
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "Could not create habit");
+      setError(body.error ?? "Could not save habit");
       return;
     }
 
-    const { habit } = await res.json();
-    onCreated({ ...habit, entries: [] });
-    setTitle("");
-    setIcon(ICONS[0]);
-    setColor(COLORS[0]);
-    setActiveWeekdays(ALL_WEEKDAYS);
+    const body = await res.json();
+    if (habit) {
+      onUpdated?.(body.habit);
+    } else {
+      onCreated?.({ ...body.habit, entries: [] });
+      reset();
+    }
     onClose();
   }
 
+  async function handleArchive() {
+    if (!habit) return;
+    setLoading(true);
+    const res = await fetch(`/api/habits/${habit.id}`, { method: "DELETE" });
+    setLoading(false);
+    if (res.ok) {
+      onArchived?.(habit.id);
+      onClose();
+    }
+  }
+
   return (
-    <Modal open={open} onClose={onClose} title="New habit">
+    <Modal open={open} onClose={onClose} title={habit ? "Edit habit" : "New habit"}>
       <div className="space-y-4">
         <div>
           <Label htmlFor="habit-title">Name</Label>
@@ -100,7 +136,7 @@ export function AddHabitModal({
                 key={i}
                 type="button"
                 onClick={() => setIcon(i)}
-                className={`flex h-9 w-9 items-center justify-center rounded-lg border text-base transition-colors ${
+                className={`flex h-11 w-11 items-center justify-center rounded-lg border text-xl transition-colors ${
                   icon === i
                     ? "border-ring bg-surface-raised"
                     : "border-border hover:bg-surface-raised"
@@ -158,13 +194,28 @@ export function AddHabitModal({
 
         {error && <p className="text-sm text-danger">{error}</p>}
 
-        <div className="flex justify-end gap-2 pt-1">
-          <Button variant="secondary" type="button" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="button" onClick={handleSubmit} disabled={loading}>
-            {loading ? "Creating…" : "Create habit"}
-          </Button>
+        <div className="flex items-center justify-between pt-1">
+          {habit ? (
+            <Button
+              variant="ghost"
+              type="button"
+              onClick={handleArchive}
+              disabled={loading}
+              className="text-danger hover:bg-danger/10"
+            >
+              Archive
+            </Button>
+          ) : (
+            <span />
+          )}
+          <div className="flex gap-2">
+            <Button variant="secondary" type="button" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleSubmit} disabled={loading}>
+              {loading ? "Saving…" : habit ? "Save" : "Create habit"}
+            </Button>
+          </div>
         </div>
       </div>
     </Modal>
