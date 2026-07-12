@@ -2,7 +2,24 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, ChevronRight, Plus, StickyNote } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, StickyNote, Check, GripVertical } from "lucide-react";
+import {
+  DndContext,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  sortableKeyboardCoordinates,
+  arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { getMonthMatrix, monthLabel, weekdayShort, isSameDay } from "@/lib/date-utils";
 import { toDateKey } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -16,10 +33,12 @@ export function HabitGrid({
   initialHabits,
   year,
   month,
+  showTicks,
 }: {
   initialHabits: HabitWithEntries[];
   year: number;
   month: number;
+  showTicks: boolean;
 }) {
   const router = useRouter();
   const [habits, setHabits] = useState(initialHabits);
@@ -30,6 +49,11 @@ export function HabitGrid({
 
   const days = useMemo(() => getMonthMatrix(year, month), [year, month]);
   const today = new Date();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   function goToMonth(delta: number) {
     const next = new Date(year, month + delta, 1);
@@ -84,6 +108,24 @@ export function HabitGrid({
     });
   }
 
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = habits.findIndex((h) => h.id === active.id);
+    const newIndex = habits.findIndex((h) => h.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(habits, oldIndex, newIndex);
+    setHabits(reordered);
+
+    await fetch("/api/habits/reorder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderedIds: reordered.map((h) => h.id) }),
+    });
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -121,94 +163,59 @@ export function HabitGrid({
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-border bg-surface">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr>
-                <th className="sticky left-0 z-10 min-w-[180px] border-b border-border bg-surface px-4 py-3 text-left text-xs font-medium text-muted-foreground">
-                  Habit
-                </th>
-                {days.map((d) => (
-                  <th
-                    key={d.toISOString()}
-                    className={`border-b border-border px-1 py-2 text-center text-[11px] font-medium ${
-                      isSameDay(d, today) ? "text-accent" : "text-subtle-foreground"
-                    }`}
-                  >
-                    <div>{weekdayShort(d)}</div>
-                    <div>{d.getDate()}</div>
+        <DndContext
+          id="habit-grid-dnd"
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="overflow-x-auto rounded-2xl border border-border bg-surface">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr>
+                  <th className="sticky left-0 z-10 min-w-[200px] border-b border-border bg-surface px-4 py-3 text-left text-xs font-medium text-muted-foreground">
+                    Habit
                   </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {habits.map((habit) => {
-                const completedCount = habit.entries.filter((e) => e.completed).length;
-                return (
-                  <tr key={habit.id} className="group">
-                    <td className="sticky left-0 z-10 border-b border-border bg-surface px-4 py-2.5">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs"
-                          style={{ backgroundColor: `${habit.color}22` }}
-                        >
-                          {habit.icon}
-                        </span>
-                        <div className="min-w-0">
-                          <p className="truncate text-xs font-medium text-foreground">
-                            {habit.title}
-                          </p>
-                          <p className="text-[10px] text-subtle-foreground">
-                            {completedCount}/{days.length} days
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    {days.map((d) => {
-                      const entry = entryFor(habit, d);
-                      const isFuture = d > today && !isSameDay(d, today);
-                      return (
-                        <td key={d.toISOString()} className="border-b border-border p-1 text-center">
-                          <button
-                            type="button"
-                            disabled={isFuture}
-                            onClick={() => quickToggle(habit, d)}
-                            onDoubleClick={(e) => {
-                              e.preventDefault();
-                              setActiveCell({ habit, date: d });
-                            }}
-                            onContextMenu={(e) => {
-                              e.preventDefault();
-                              setActiveCell({ habit, date: d });
-                            }}
-                            className="relative mx-auto flex h-7 w-7 items-center justify-center rounded-md border transition-colors disabled:cursor-not-allowed disabled:opacity-30"
-                            style={{
-                              borderColor: entry?.completed ? habit.color : "var(--border-strong)",
-                              backgroundColor: entry?.completed ? habit.color : "transparent",
-                            }}
-                            aria-label={`Toggle ${habit.title} on ${d.toDateString()}`}
-                            title="Click to toggle · right-click / double-click for notes"
-                          >
-                            {entry?.note && (
-                              <StickyNote
-                                size={9}
-                                className="absolute -top-1 -right-1 rounded-full bg-surface text-accent"
-                              />
-                            )}
-                          </button>
-                        </td>
-                      );
-                    })}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                  {days.map((d) => (
+                    <th
+                      key={d.toISOString()}
+                      className={`border-b border-border px-1 py-2 text-center text-[11px] font-medium ${
+                        isSameDay(d, today) ? "text-accent" : "text-subtle-foreground"
+                      }`}
+                    >
+                      <div>{weekdayShort(d)}</div>
+                      <div>{d.getDate()}</div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <SortableContext
+                items={habits.map((h) => h.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <tbody>
+                  {habits.map((habit) => (
+                    <SortableHabitRow
+                      key={habit.id}
+                      habit={habit}
+                      days={days}
+                      today={today}
+                      showTicks={showTicks}
+                      entryFor={entryFor}
+                      quickToggle={quickToggle}
+                      onOpenEntry={(date) => setActiveCell({ habit, date })}
+                    />
+                  ))}
+                </tbody>
+              </SortableContext>
+            </table>
+          </div>
+        </DndContext>
       )}
 
       <p className="text-xs text-subtle-foreground">
-        Tip: click a day to toggle it done, right-click (or double-click) to add a note.
+        Tip: drag the grip to reorder · click a day to toggle it done · right-click (or
+        double-click) to add a note.
       </p>
 
       <AddHabitModal
@@ -235,5 +242,101 @@ export function HabitGrid({
         />
       )}
     </div>
+  );
+}
+
+function SortableHabitRow({
+  habit,
+  days,
+  today,
+  showTicks,
+  entryFor,
+  quickToggle,
+  onOpenEntry,
+}: {
+  habit: HabitWithEntries;
+  days: Date[];
+  today: Date;
+  showTicks: boolean;
+  entryFor: (habit: HabitWithEntries, date: Date) => HabitEntry | undefined;
+  quickToggle: (habit: HabitWithEntries, date: Date) => void;
+  onOpenEntry: (date: Date) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: habit.id,
+  });
+
+  const completedCount = habit.entries.filter((e) => e.completed).length;
+
+  return (
+    <tr
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={isDragging ? "relative z-20 bg-surface-raised" : "group"}
+    >
+      <td className="sticky left-0 z-10 border-b border-border bg-surface px-2 py-2.5">
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            className="flex h-6 w-4 shrink-0 cursor-grab items-center justify-center text-subtle-foreground opacity-0 group-hover:opacity-100 active:cursor-grabbing"
+            aria-label={`Drag to reorder ${habit.title}`}
+          >
+            <GripVertical size={14} />
+          </button>
+          <span
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs"
+            style={{ backgroundColor: `${habit.color}22` }}
+          >
+            {habit.icon}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-xs font-medium text-foreground">{habit.title}</p>
+            <p className="text-[10px] text-subtle-foreground">
+              {completedCount}/{days.length} days
+            </p>
+          </div>
+        </div>
+      </td>
+      {days.map((d) => {
+        const entry = entryFor(habit, d);
+        const isFuture = d > today && !isSameDay(d, today);
+        return (
+          <td key={d.toISOString()} className="border-b border-border p-1 text-center">
+            <button
+              type="button"
+              disabled={isFuture}
+              onClick={() => quickToggle(habit, d)}
+              onDoubleClick={(e) => {
+                e.preventDefault();
+                onOpenEntry(d);
+              }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                onOpenEntry(d);
+              }}
+              className="relative mx-auto flex h-7 w-7 items-center justify-center rounded-md border transition-colors disabled:cursor-not-allowed disabled:opacity-30"
+              style={{
+                borderColor: entry?.completed ? habit.color : "var(--border-strong)",
+                backgroundColor: entry?.completed ? habit.color : "transparent",
+              }}
+              aria-label={`Toggle ${habit.title} on ${d.toDateString()}`}
+              title="Click to toggle · right-click / double-click for notes"
+            >
+              {entry?.completed && showTicks && (
+                <Check size={13} strokeWidth={3} className="text-white" />
+              )}
+              {entry?.note && (
+                <StickyNote
+                  size={9}
+                  className="absolute -top-1 -right-1 rounded-full bg-surface text-accent"
+                />
+              )}
+            </button>
+          </td>
+        );
+      })}
+    </tr>
   );
 }

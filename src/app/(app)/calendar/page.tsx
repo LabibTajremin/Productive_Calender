@@ -19,15 +19,21 @@ export default async function CalendarPage({
   const start = new Date(Date.UTC(year, month, 1));
   const end = new Date(Date.UTC(year, month + 1, 0, 23, 59, 59, 999));
 
-  const habits = await prisma.habit.findMany({
-    where: { userId: session.user.id, archived: false },
-    orderBy: { order: "asc" },
-    include: {
-      entries: {
-        where: { date: { gte: start, lte: end } },
+  const [habits, user] = await Promise.all([
+    prisma.habit.findMany({
+      where: { userId: session.user.id, archived: false },
+      orderBy: { order: "asc" },
+      include: {
+        entries: {
+          where: { date: { gte: start, lte: end } },
+        },
       },
-    },
-  });
+    }),
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { showHabitTicks: true },
+    }),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -38,7 +44,12 @@ export default async function CalendarPage({
         </p>
       </div>
 
-      <HabitGrid initialHabits={habits} year={year} month={month} />
+      <HabitGrid
+        initialHabits={habits}
+        year={year}
+        month={month}
+        showTicks={user?.showHabitTicks ?? true}
+      />
     </div>
   );
 }

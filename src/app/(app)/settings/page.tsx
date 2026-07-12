@@ -7,11 +7,17 @@ export default async function SettingsPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const setting = await prisma.notificationSetting.upsert({
-    where: { userId: session.user.id },
-    create: { userId: session.user.id },
-    update: {},
-  });
+  const [setting, user] = await Promise.all([
+    prisma.notificationSetting.upsert({
+      where: { userId: session.user.id },
+      create: { userId: session.user.id },
+      update: {},
+    }),
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { showHabitTicks: true },
+    }),
+  ]);
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -33,6 +39,7 @@ export default async function SettingsPage() {
           reminderHour: setting.reminderHour,
           weeklySummary: setting.weeklySummary,
         }}
+        initialPreferences={{ showHabitTicks: user?.showHabitTicks ?? true }}
       />
     </div>
   );

@@ -9,7 +9,7 @@ export async function GET() {
 
   const tasks = await prisma.task.findMany({
     where: { userId: auth.userId },
-    orderBy: [{ completed: "asc" }, { dueDate: "asc" }, { createdAt: "desc" }],
+    orderBy: [{ completed: "asc" }, { order: "asc" }, { createdAt: "desc" }],
   });
 
   return NextResponse.json({ tasks });
@@ -31,12 +31,15 @@ export async function POST(request: Request) {
 
   const { title, note, dueDate, priority } = parsed.data;
 
+  const count = await prisma.task.count({ where: { userId: auth.userId } });
+
   const task = await prisma.task.create({
     data: {
       userId: auth.userId,
       title,
       note,
       priority,
+      order: count,
       dueDate: dueDate ? new Date(dueDate) : null,
     },
   });

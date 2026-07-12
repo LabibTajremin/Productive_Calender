@@ -44,3 +44,11 @@ export const notificationSettingSchema = z.object({
   reminderHour: z.number().int().min(0).max(23),
   weeklySummary: z.boolean(),
 });
+
+export const reorderSchema = z.object({
+  orderedIds: z.array(z.string().min(1)).min(1).max(500),
+});
+
+export const preferencesSchema = z.object({
+  showHabitTicks: z.boolean(),
+});
