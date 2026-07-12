@@ -205,6 +205,29 @@ function TaskGroup({
   );
 }
 
+function dueDateBadge(
+  dueDate: Date | null,
+  completed: boolean,
+): { label: string; tone: "danger" | "warning" | "muted" } | null {
+  if (!dueDate) return null;
+
+  const due = new Date(dueDate);
+  due.setHours(23, 59, 59, 999);
+  const diffDays = Math.ceil((due.getTime() - Date.now()) / 86_400_000);
+
+  const dateLabel = new Date(dueDate).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+
+  if (completed) return { label: dateLabel, tone: "muted" };
+  if (diffDays < 0) return { label: `${Math.abs(diffDays)}d overdue`, tone: "danger" };
+  if (diffDays === 0) return { label: "Due today", tone: "warning" };
+  if (diffDays === 1) return { label: "Due tomorrow", tone: "warning" };
+  if (diffDays <= 3) return { label: `${dateLabel} · in ${diffDays}d`, tone: "warning" };
+  return { label: dateLabel, tone: "muted" };
+}
+
 function SortableTaskCard({
   task,
   onToggle,
@@ -219,10 +242,10 @@ function SortableTaskCard({
   });
   const [noteExpanded, setNoteExpanded] = useState(false);
 
-  const isOverdue = !task.completed && !!task.dueDate && new Date(task.dueDate) < new Date();
   const note = task.note ?? "";
   const noteIsLong = note.length > NOTE_PREVIEW_LENGTH;
   const notePreview = noteIsLong ? `${note.slice(0, NOTE_PREVIEW_LENGTH).trimEnd()}…` : note;
+  const due = dueDateBadge(task.dueDate, task.completed);
 
   return (
     <Card
@@ -231,10 +254,10 @@ function SortableTaskCard({
         transform: CSS.Transform.toString(transform),
         transition,
         borderLeftColor: PRIORITY_ACCENT[task.priority],
-        borderLeftWidth: 4,
+        borderLeftWidth: 6,
       }}
       className={cn(
-        "group flex items-start gap-2 py-3 pr-3.5 pl-3 transition-shadow hover:shadow-md",
+        "group relative flex items-stretch gap-2 py-3 pr-3.5 pl-3 transition-shadow hover:shadow-md",
         isDragging && "relative z-20 shadow-lg",
       )}
     >
@@ -242,7 +265,7 @@ function SortableTaskCard({
         type="button"
         {...attributes}
         {...listeners}
-        className="mt-0.5 flex h-5 w-4 shrink-0 cursor-grab items-center justify-center text-subtle-foreground opacity-0 group-hover:opacity-100 active:cursor-grabbing"
+        className="mt-0.5 flex h-5 w-4 shrink-0 cursor-grab items-center justify-center self-start text-subtle-foreground opacity-0 group-hover:opacity-100 active:cursor-grabbing"
         aria-label={`Drag to reorder ${task.title}`}
       >
         <GripVertical size={14} />
@@ -252,7 +275,7 @@ function SortableTaskCard({
         type="button"
         onClick={() => onToggle(task)}
         className={cn(
-          "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-colors",
+          "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center self-start rounded-md border-2 transition-colors",
           task.completed
             ? "border-success bg-success text-white"
             : "border-border-strong hover:border-accent",
@@ -262,32 +285,19 @@ function SortableTaskCard({
         {task.completed && <Check size={12} strokeWidth={3} />}
       </button>
 
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <button
-            type="button"
-            onClick={() => onEdit(task)}
-            className="min-w-0 flex-1 text-left"
-          >
-            <p
-              className={cn(
-                "truncate text-sm font-medium text-foreground",
-                task.completed && "text-muted-foreground line-through",
-              )}
-            >
-              {task.title}
-            </p>
-          </button>
-          <button
-            type="button"
-            onClick={() => onEdit(task)}
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-subtle-foreground opacity-0 transition-opacity hover:bg-surface-raised hover:text-foreground group-hover:opacity-100"
-            aria-label={`Edit ${task.title}`}
-            title="Edit task"
-          >
-            <Pencil size={13} />
-          </button>
-        </div>
+      <button
+        type="button"
+        onClick={() => onEdit(task)}
+        className="min-w-0 flex-1 text-left"
+      >
+        <p
+          className={cn(
+            "truncate text-sm font-medium text-foreground",
+            task.completed && "text-muted-foreground line-through",
+          )}
+        >
+          {task.title}
+        </p>
 
         <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <span className={cn("inline-flex items-center gap-1 font-medium", PRIORITY_TEXT[task.priority])}>
@@ -297,24 +307,9 @@ function SortableTaskCard({
             />
             {task.priority}
           </span>
-          {task.dueDate && (
-            <span
-              className={cn(
-                "inline-flex items-center gap-1",
-                isOverdue && "font-medium text-danger",
-              )}
-            >
-              {isOverdue ? <AlertCircle size={11} /> : <CalendarIcon size={11} />}
-              {new Date(task.dueDate).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })}
-              {isOverdue && " · overdue"}
-            </span>
-          )}
         </div>
 
-        {note && (
+        {note ? (
           <div className="mt-1.5 flex items-start gap-1 text-xs text-muted-foreground">
             <StickyNote size={11} className="mt-0.5 shrink-0" />
             <p className="min-w-0">
@@ -333,6 +328,40 @@ function SortableTaskCard({
               )}
             </p>
           </div>
+        ) : (
+          <p className="mt-1.5 text-xs italic text-subtle-foreground">No note added</p>
+        )}
+      </button>
+
+      <div className="flex w-32 shrink-0 flex-col items-end justify-between border-l border-border pl-3">
+        <button
+          type="button"
+          onClick={() => onEdit(task)}
+          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-subtle-foreground opacity-0 transition-opacity hover:bg-surface-raised hover:text-foreground group-hover:opacity-100"
+          aria-label={`Edit ${task.title}`}
+          title="Edit task"
+        >
+          <Pencil size={13} />
+        </button>
+
+        {due ? (
+          <span
+            className={cn(
+              "inline-flex items-center gap-1 rounded-md px-2 py-1 text-right text-[11px] font-medium",
+              due.tone === "danger" && "bg-danger/10 text-danger",
+              due.tone === "warning" && "bg-warning/10 text-warning",
+              due.tone === "muted" && "text-muted-foreground",
+            )}
+          >
+            {due.tone === "danger" ? (
+              <AlertCircle size={11} />
+            ) : (
+              <CalendarIcon size={11} />
+            )}
+            {due.label}
+          </span>
+        ) : (
+          <span className="text-[11px] text-subtle-foreground">No due date</span>
         )}
       </div>
     </Card>
