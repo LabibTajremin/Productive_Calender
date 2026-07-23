@@ -5,6 +5,8 @@ grid, plan tasks with notes, and see your progress on an interactive
 dashboard. Built with Next.js, Prisma/PostgreSQL, NextAuth, Resend, and
 Recharts.
 
+**Live demo:** [productive-calender.vercel.app](https://productive-calender.vercel.app/dashboard)
+
 ## Features
 
 - **Habit calendar** — a month grid of habits × days, click to toggle,
